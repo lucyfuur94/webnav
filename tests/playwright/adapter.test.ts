@@ -24,4 +24,16 @@ describe('PlaywrightAdapter', () => {
     expect(snap).toContain('searchbox');
     expect(fakeReadFile).toHaveBeenCalledWith('.playwright-cli/page-1.yml');
   });
+
+  it('snapshot throws when stdout has no yml path', async () => {
+    const a = new PlaywrightAdapter('s', async () => '### Page\n- Page URL: https://x');
+    await expect(a.snapshot()).rejects.toThrow(/could not find YAML path/);
+  });
+
+  it('fill passes ref then text in order', async () => {
+    const calls: string[][] = [];
+    const a = new PlaywrightAdapter('s', async (args) => { calls.push(args); return 'ok'; });
+    await a.fill('e8', 'playwright');
+    expect(calls[0]).toEqual(['-s=s', 'fill', 'e8', 'playwright']);
+  });
 });
