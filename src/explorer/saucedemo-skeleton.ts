@@ -6,8 +6,10 @@ import type { MapStore } from '../mapstore/store.js';
  * The known saucedemo navigation skeleton as pure DATA (principle #6).
  *
  * STRUCTURE ONLY: states + edges between them. It must NEVER contain credentials,
- * names, zips, or any other runtime value — those are supplied at walk time via
- * `walkRoute`'s `inputs` map and the edges' `acceptsInput` slots (principle #6 / §4).
+ * names, zips, or any other runtime value — those are supplied at walk time by the
+ * LIVE browser closure (e.g. runWalkLive's captured `inputs` map), keyed off each
+ * edge's `acceptsInput` slot. walkRoute itself only forwards the slot NAME to act();
+ * it never holds runtime values (principle #6 / §4).
  *
  * Fingerprints are arrays of `role` or `role:name` tokens matched by `matchState`;
  * these were captured from the live saucedemo.com site. Note: StateRole has no
@@ -77,7 +79,11 @@ export const SAUCEDEMO_SKELETON: { states: State[]; edges: Edge[] } = {
     makeEdge({
       fromState: 'sd:inventory',
       toState: 'sd:cart',
-      semanticStep: 'add item to cart and open cart via "Add to cart"',
+      // Target a SPECIFIC product by its unique link name: every product's button
+      // is just "Add to cart" (not unique → resolveStep correctly escalates rather
+      // than guess which of 6). A real route targets a specific item; "Sauce Labs
+      // Backpack" is the canonical first product on saucedemo.
+      semanticStep: 'add the "Sauce Labs Backpack" to cart and open cart',
       kind: 'safe-reversible',
     }),
     makeEdge({

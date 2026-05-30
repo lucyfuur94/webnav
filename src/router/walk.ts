@@ -6,9 +6,15 @@ import { matchState } from '../explorer/fingerprint.js';
 import { replayStep } from './replay.js';
 
 // Minimal browser the walk drives. The live adapter implements this; tests fake it.
+// ASYNC so ONE walk loop serves both the scripted unit fake and the real
+// (Promise-returning) PlaywrightAdapter — no duplicated loop.
 export interface WalkBrowser {
-  snapshot(): string;          // current page snapshot YAML
-  act(ref: string): void;      // perform the resolved action (click/fill) on a ref
+  snapshot(): Promise<string>;          // current page snapshot YAML
+  // Perform the resolved action for an edge. `ref` is the element to act on;
+  // `inputSlot` (if the edge declares acceptsInput) names the runtime input to use.
+  // The live browser owns the `inputs` map and looks the slot up; the unit fake
+  // ignores both and just advances the scripted snapshot.
+  act(ref: string, inputSlot: string | null): Promise<void>;
   callCount(): number;
 }
 
@@ -19,7 +25,10 @@ export interface WalkArgs {
   store: MapStore;
   states: State[];             // known states for matchState (the skeleton's states)
   browser: WalkBrowser;
-  inputs: Record<string, string>;  // runtime slot values (credentials, shipping, ...) — NOT stored as map
+  // NOTE: `inputs` was REMOVED from WalkArgs (cleaner option per W2). The walk no
+  // longer touches runtime values; it only passes each edge's `acceptsInput` slot
+  // NAME to browser.act(). The LIVE browser closure owns the inputs map and resolves
+  // the slot -> value when filling fields. Keeps the walk runtime-value-free.
 }
 
 /**
@@ -30,12 +39,8 @@ export interface WalkArgs {
  * Zero LLM: replayStep resolves deterministically (cached ref, then role+name);
  * any decision webnav isn't allowed to make is handed back as a `needs-*` response.
  */
-export function walkRoute(args: WalkArgs): RecallResponse {
-  const { goalName, startStateId, goalStateId, store, states, browser, inputs } = args;
-  // `inputs` is runtime-only (credentials/shipping); the live adapter consumes it
-  // when filling acceptsInput edges. The unit fake just advances on act(), so we
-  // don't read it here — referencing it keeps the contract explicit.
-  void inputs;
+export async function walkRoute(args: WalkArgs): Promise<RecallResponse> {
+  const { goalName, startStateId, goalStateId, store, states, browser } = args;
 
   let current = startStateId;
   let at = 0;
@@ -52,7 +57,7 @@ export function walkRoute(args: WalkArgs): RecallResponse {
     const edge = edges[0];
 
     // Read the CURRENT page (before acting) so commit/drift checks see this page.
-    const yaml = browser.snapshot();
+    const yaml = await browser.snapshot();
     const nodes = parseSnapshot(yaml);
 
     const r = replayStep(edge, nodes);
@@ -72,13 +77,14 @@ export function walkRoute(args: WalkArgs): RecallResponse {
     }
 
     // r.status === 'ok' — perform the resolved action. Input filling for
-    // acceptsInput edges is handled by the live browser via `inputs`; the unit
-    // fake's act() just advances the scripted snapshot.
-    browser.act(r.ref);
+    // acceptsInput edges is handled by the live browser via its captured `inputs`;
+    // we hand it the slot NAME (edge.acceptsInput) so it knows whether/which input
+    // to fill. The unit fake's act() ignores both args and just advances.
+    await browser.act(r.ref, edge.acceptsInput);
 
     // PREDICTION vs OBSERVATION: compare the edge's expected toState against the
     // live snapshot. Mismatch or ambiguity → escalate, never march on blind.
-    const afterYaml = browser.snapshot();
+    const afterYaml = await browser.snapshot();
     const observed = matchState(parseSnapshot(afterYaml), states);
     if (observed.status !== 'matched' || observed.state.id !== edge.toState) {
       return {
