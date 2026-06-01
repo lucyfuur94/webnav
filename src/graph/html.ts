@@ -107,7 +107,20 @@ export function renderGraphHtml(view: GraphView): string {
 
 <script type="application/json" id="graph-data">${data}</script>
 <script src="https://unpkg.com/cytoscape@3/dist/cytoscape.min.js"></script>
+<script src="https://unpkg.com/layout-base@2/layout-base.js"></script>
+<script src="https://unpkg.com/cose-base@2/cose-base.js"></script>
 <script src="https://unpkg.com/cytoscape-fcose@2/cytoscape-fcose.js"></script>
+<script>
+// Register the fcose layout. The UMD bundle needs layout-base + cose-base
+// loaded first (above) or it throws on load; even then it does not always
+// self-register, so register explicitly. Guarded so a CDN/load failure here
+// can't crash the viewer — runLayout() falls back to the built-in 'cose'.
+try {
+  if (typeof cytoscape !== 'undefined' && typeof cytoscapeFcose !== 'undefined') {
+    cytoscape.use(cytoscapeFcose);
+  }
+} catch (e) { /* fall back to cose */ }
+</script>
 <script>
 (function () {
   'use strict';
