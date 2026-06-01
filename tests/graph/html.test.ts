@@ -37,6 +37,27 @@ describe('renderGraphHtml', () => {
     expect(h).toContain('cytoscape-fcose');
   });
 
+  it('loads fcose with its peer deps in order and registers it', () => {
+    const h = renderGraphHtml(view);
+    // cytoscape-fcose needs layout-base + cose-base loaded before it, or it
+    // throws "Cannot read properties of undefined (reading 'layoutBase')" on
+    // load and the viewer silently falls back to the plain cose layout.
+    const cyIdx = h.indexOf('unpkg.com/cytoscape@3');
+    const layoutBaseIdx = h.indexOf('unpkg.com/layout-base');
+    const coseBaseIdx = h.indexOf('unpkg.com/cose-base');
+    const fcoseIdx = h.indexOf('cytoscape-fcose');
+    expect(cyIdx).toBeGreaterThanOrEqual(0);
+    expect(layoutBaseIdx).toBeGreaterThanOrEqual(0);
+    expect(coseBaseIdx).toBeGreaterThanOrEqual(0);
+    // Dependency order: cytoscape -> layout-base -> cose-base -> fcose.
+    expect(layoutBaseIdx).toBeGreaterThan(cyIdx);
+    expect(coseBaseIdx).toBeGreaterThan(layoutBaseIdx);
+    expect(fcoseIdx).toBeGreaterThan(coseBaseIdx);
+    // The UMD bundle self-registers on some versions but not reliably; register
+    // explicitly, guarded so a load failure can't crash the script.
+    expect(h).toContain('cytoscape.use');
+  });
+
   it('shows counts of sites, clusters, and edges', () => {
     const h = renderGraphHtml(view);
     expect(h).toContain('2'); // 2 sites / 2 clusters

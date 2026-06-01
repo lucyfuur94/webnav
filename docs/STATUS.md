@@ -1,6 +1,6 @@
 # webnav — STATUS (live handoff)
 
-**Updated:** 2026-06-01 · **Branch:** `main` · **Tests:** 192 unit pass + 2 gated live e2e (skipped without `WEBNAV_LIVE=1`) · **Build:** green
+**Updated:** 2026-06-01 · **Branch:** `main` · **Tests:** 191 unit pass + 2 gated live e2e (skipped without `WEBNAV_LIVE=1`) · **Build:** green
 
 > This is the canonical "where are we / what's next / how to run" doc. Keep it
 > current. CLAUDE.md = settled design & principles; this = the live checklist.
@@ -57,18 +57,31 @@ Exit codes: 0 ok · 2 error (→ stderr + `--help` hint) · 3 ran-fine-but-empty
 - **Phase 2 G1–G3:** internet graph + `route`/`hop`.
 - **Graph-viz:** `graph`/`add-node`/`add-edge` + Cytoscape HTML viewer.
 
+## ✅ Graph HTML viewer render — VERIFIED (2026-06-01)
+
+Rendered `webnav graph --html` headlessly and confirmed Cytoscape draws all 5
+nodes, cluster colors, 3 labelled edges, the legend, and both teach forms.
+**Note:** `playwright-cli` blocks `file:` URLs (only http/https/data allowed),
+so the path is: `webnav graph --html > /tmp/map.html` → `python3 -m http.server`
+→ `playwright-cli goto http://127.0.0.1:PORT/map.html` → `eval`/`screenshot`.
+While verifying, found + fixed a real bug: `cytoscape-fcose@2` threw on load
+(`Cannot read properties of undefined (reading 'layoutBase')`) because its
+`layout-base`/`cose-base` peer deps weren't loaded and it wasn't registered via
+`cytoscape.use` — the viewer was silently falling back to the plain `cose`
+layout. Fixed in `src/graph/html.ts` (deps loaded in order + explicit guarded
+`cytoscape.use(cytoscapeFcose)`); re-verified render is clean (only a harmless
+favicon 404 remains). Covered by a new unit test in `tests/graph/html.test.ts`.
+
 ## ⚠️ PENDING — start here next session
 
-1. **VERIFY the graph HTML viewer renders.** It generates + is unit-tested, but the in-browser render was NOT visually confirmed (the Chrome MCP browser-bridge tool timed out). **Do this first.** Suggested path: render `/tmp/webnav-map.html` (or `webnav graph --html > map.html`) headlessly via `playwright-cli open file://… && snapshot` (we know that works) and confirm Cytoscape drew the nodes/clusters; or retry the Chrome bridge if it's back.
+In roughly recommended order:
 
-Then, in roughly recommended order:
-
-2. **R1 — A/B benchmark (recommended payoff):** subagent + the real `webnav` CLI vs subagent + plain web search, on ~8–12 real navigation/info-seeking tasks; score answer correctness + agent tokens. Turns capability into evidence. The CLI is now self-describing so the subagent can use it. (Honest scoping & failure-mode analysis: see the "coverage" discussion — webnav covers navigation/memory/extraction/token-cost/site-selection; NOT answer-synthesis/adversarial/low-level-mechanics, which are the agent's job.)
-3. **R5 — resume loop:** agent answers a `needs-navigation`/`needs-classification`; `walkRoute` continues to completion. Lets the saucedemo flow finish autonomously end-to-end.
-4. **G4 — co-use weight learning:** node-edge weights emerge from usage + decay (the Maps-traffic analog), so `route` ordering reflects real use. `recordOutcome`/`decayConfidence` machinery already exists at the intra-site edge level — reuse at the node level.
-5. **Auto-learn nodes from usage:** when search/recall visits a new site, auto-add it as a node (the self-growing gazetteer).
-6. **Phase 5 — MCP wrapper (secondary):** expose the verbs as MCP tools; CLI stays primary; test both.
-7. **Richer GitHub signals:** `closed_issues`, `latest_release`, `has_ci` (currently omitted).
+1. **R1 — A/B benchmark (recommended payoff):** subagent + the real `webnav` CLI vs subagent + plain web search, on ~8–12 real navigation/info-seeking tasks; score answer correctness + agent tokens. Turns capability into evidence. The CLI is now self-describing so the subagent can use it. (Honest scoping & failure-mode analysis: see the "coverage" discussion — webnav covers navigation/memory/extraction/token-cost/site-selection; NOT answer-synthesis/adversarial/low-level-mechanics, which are the agent's job.)
+2. **R5 — resume loop:** agent answers a `needs-navigation`/`needs-classification`; `walkRoute` continues to completion. Lets the saucedemo flow finish autonomously end-to-end.
+3. **G4 — co-use weight learning:** node-edge weights emerge from usage + decay (the Maps-traffic analog), so `route` ordering reflects real use. `recordOutcome`/`decayConfidence` machinery already exists at the intra-site edge level — reuse at the node level.
+4. **Auto-learn nodes from usage:** when search/recall visits a new site, auto-add it as a node (the self-growing gazetteer).
+5. **Phase 5 — MCP wrapper (secondary):** expose the verbs as MCP tools; CLI stays primary; test both.
+6. **Richer GitHub signals:** `closed_issues`, `latest_release`, `has_ci` (currently omitted).
 
 ## Honest known limitations (not bugs — design/ecosystem reality)
 
