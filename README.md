@@ -20,8 +20,9 @@ measured win is the agent's **tokens + time** (the evidence bundle reports `toke
 
 ```bash
 npm install                 # Node 18+ (better-sqlite3 native build)
-npm test                    # 192 unit tests
+npm test                    # unit tests (+ gated browser e2e)
 npm run build               # tsc -> dist/
+npm run dev                 # live graph viewer -> http://127.0.0.1:7777
 npx tsx src/cli.ts --help   # the tool menu
 ```
 Needs `playwright-cli` on PATH. A gitignored `webnav.db` (SQLite) persists the map across runs.
@@ -45,8 +46,13 @@ webnav capture <url> <out.yml>               dev: save a snapshot YAML
 
 ### See the map
 ```bash
-webnav graph --html > map.html   # open in a browser: nodes = sites, grouped by capability cluster
+npm run dev                      # live viewer at http://127.0.0.1:7777 (reads SQLite live)
+                                 #   click a site-node to drill into its intra-site interior
+                                 #   (states + action-edges) fetched from /api/node/<id>/interior
+webnav graph --html > map.html   # OR a static, shareable snapshot (no drill-in)
 ```
+The live viewer is served by a tiny read-only HTTP server (`src/server.ts`, Node
+`http`, no new deps). The static `--html` export inlines the data for sharing.
 
 ## Architecture (one CLI, three components, ZERO LLM)
 

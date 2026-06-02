@@ -1,6 +1,8 @@
 import type { MapStore } from '../mapstore/store.js';
 import type { SiteNode, NodeEdge } from '../mapstore/types.js';
 import { makeNodeEdge } from '../mapstore/types.js';
+import { exploreGitHub } from '../explorer/github-skeleton.js';
+import { exploreSaucedemo } from '../explorer/saucedemo-skeleton.js';
 
 // Seed-and-grow (spec #2): the graph starts from the nodes webnav actually
 // navigates and grows from there. This is the structure-only starting set —
@@ -35,4 +37,21 @@ export function seedGraph(store: MapStore): void {
     for (const n of INTERNET_GRAPH_SEED.nodes) store.upsertNode(n);
     for (const e of INTERNET_GRAPH_SEED.edges) store.upsertNodeEdge(e);
   });
+  // Interiors: the known site skeletons are seed DATA. exploreGitHub/Saucedemo
+  // each run their own transaction (atomic, idempotent upserts).
+  exploreGitHub(store);
+  exploreSaucedemo(store);
+}
+
+/**
+ * Ensure the map is fully seeded — nodes AND interiors. Use this as the bootstrap
+ * guard (NOT `if (!getNode(...))`): a pre-existing webnav.db may already have the
+ * nodes from an older seed but ZERO interior states, so a node-only guard would
+ * skip seeding and leave drill-in empty. We guard on a known interior state
+ * instead. seedGraph's upserts are idempotent, so calling it again is cheap+safe.
+ */
+export function ensureSeeded(store: MapStore): void {
+  if (store.getState('github:repo-detail') === null) {
+    seedGraph(store);
+  }
 }

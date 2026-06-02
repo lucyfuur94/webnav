@@ -8,11 +8,63 @@ import { makeEdge, makeNodeEdge } from './types.js';
 const SCHEMA = readFileSync(
   join(dirname(fileURLToPath(import.meta.url)), 'schema.sql'), 'utf8');
 
-export class MapStore {
+/** The data-access seam. SqliteMapStore is the only impl today; a hosted
+ *  backend (Firestore/Postgres) can implement the same interface later. */
+export interface IMapStore {
+  transaction(fn: () => void): void;
+  upsertState(s: State): void;
+  getState(id: string): State | null;
+  allStates(): State[];
+  statesForNode(nodeId: string): State[];
+  upsertEdge(e: Edge): void;
+  edgesFrom(fromState: string): Edge[];
+  allEdges(): Edge[];
+  recordOutcome(fromState: string, toState: string, semanticStep: string, success: boolean): void;
+  decayConfidence(nowMs?: number, halfLifeMs?: number): void;
+  upsertGoal(g: Goal): void;
+  getGoal(name: string): Goal | null;
+  upsertNode(n: SiteNode): void;
+  getNode(id: string): SiteNode | null;
+  allNodes(): SiteNode[];
+  nodesByCapability(capability: string): SiteNode[];
+  upsertNodeEdge(e: NodeEdge): void;
+  nodeEdgesFrom(fromNode: string): NodeEdge[];
+  allNodeEdges(): NodeEdge[];
+}
+
+export class MapStore implements IMapStore {
   private db: Database.Database;
   constructor(path = 'webnav.db') {
     this.db = new Database(path);
     this.db.exec(SCHEMA);
+    this.migrate();
+  }
+
+  /** Open a store over an already-constructed Database handle (used by tests + migration). */
+  static fromDatabase(db: Database.Database): MapStore {
+    const store = Object.create(MapStore.prototype) as MapStore;
+    (store as any).db = db;
+    db.exec(SCHEMA);
+    (store as any).migrate();
+    return store;
+  }
+
+  /** Idempotent: add states.node_id if missing, backfill from the id prefix. */
+  private migrate(): void {
+    const cols: any[] = this.db.prepare('PRAGMA table_info(states)').all();
+    const hasNodeId = cols.some((c) => c.name === 'node_id');
+    if (!hasNodeId) {
+      this.db.exec('ALTER TABLE states ADD COLUMN node_id TEXT');
+    }
+    // Backfill any rows with a NULL node_id we can resolve from the id prefix.
+    const prefixToNode: Record<string, string> = { github: 'github.com', sd: 'saucedemo' };
+    const rows: any[] = this.db.prepare('SELECT id FROM states WHERE node_id IS NULL').all();
+    const upd = this.db.prepare('UPDATE states SET node_id=? WHERE id=?');
+    for (const r of rows) {
+      const prefix = String(r.id).split(':')[0];
+      const node = prefixToNode[prefix];
+      if (node) upd.run(node, r.id);
+    }
   }
 
   /** Run `fn` atomically — all writes commit together or none do (no torn skeleton). */
@@ -21,19 +73,29 @@ export class MapStore {
   }
 
   upsertState(s: State): void {
-    this.db.prepare(`INSERT INTO states VALUES (@id,@semanticName,@urlPattern,@role,@sig,@fp)
-      ON CONFLICT(id) DO UPDATE SET semantic_name=@semanticName, url_pattern=@urlPattern,
+    // Explicit column names (NOT positional VALUES): on a migrated DB the
+    // `node_id` column is appended LAST by ALTER TABLE, not 2nd as in fresh
+    // schema. Naming the columns keeps the write correct regardless of order.
+    this.db.prepare(`INSERT INTO states (id,node_id,semantic_name,url_pattern,role,available_signals,fingerprint)
+      VALUES (@id,@nodeId,@semanticName,@urlPattern,@role,@sig,@fp)
+      ON CONFLICT(id) DO UPDATE SET node_id=@nodeId, semantic_name=@semanticName, url_pattern=@urlPattern,
       role=@role, available_signals=@sig, fingerprint=@fp`)
       .run({
-        id: s.id, semanticName: s.semanticName, urlPattern: s.urlPattern, role: s.role,
+        id: s.id, nodeId: s.nodeId, semanticName: s.semanticName, urlPattern: s.urlPattern, role: s.role,
         sig: JSON.stringify(s.availableSignals), fp: JSON.stringify(s.fingerprint),
       });
   }
   getState(id: string): State | null {
     const r: any = this.db.prepare('SELECT * FROM states WHERE id=?').get(id);
-    return r ? { id: r.id, semanticName: r.semantic_name, urlPattern: r.url_pattern,
-      role: r.role, availableSignals: JSON.parse(r.available_signals),
-      fingerprint: JSON.parse(r.fingerprint) } : null;
+    return r ? rowToState(r) : null;
+  }
+  allStates(): State[] {
+    const rows: any[] = this.db.prepare('SELECT * FROM states ORDER BY id').all();
+    return rows.map(rowToState);
+  }
+  statesForNode(nodeId: string): State[] {
+    const rows: any[] = this.db.prepare('SELECT * FROM states WHERE node_id=? ORDER BY id').all(nodeId);
+    return rows.map(rowToState);
   }
 
   upsertEdge(e: Edge): void {
@@ -52,6 +114,10 @@ export class MapStore {
   }
   edgesFrom(fromState: string): Edge[] {
     const rows: any[] = this.db.prepare('SELECT * FROM edges WHERE from_state=?').all(fromState);
+    return rows.map(rowToEdge);
+  }
+  allEdges(): Edge[] {
+    const rows: any[] = this.db.prepare('SELECT * FROM edges ORDER BY from_state, to_state, semantic_step').all();
     return rows.map(rowToEdge);
   }
 
@@ -150,6 +216,12 @@ function rowToNodeEdge(r: any): NodeEdge {
     fromNode: r.from_node, toNode: r.to_node, kind: r.kind,
     weight: r.weight, lastVerified: r.last_verified, confidence: r.confidence,
   });
+}
+
+function rowToState(r: any): State {
+  return { id: r.id, nodeId: r.node_id, semanticName: r.semantic_name, urlPattern: r.url_pattern,
+    role: r.role, availableSignals: JSON.parse(r.available_signals),
+    fingerprint: JSON.parse(r.fingerprint) };
 }
 
 function rowToEdge(r: any): Edge {

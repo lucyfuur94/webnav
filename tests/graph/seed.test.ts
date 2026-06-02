@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { MapStore } from '../../src/mapstore/store.js';
-import { seedGraph, INTERNET_GRAPH_SEED } from '../../src/graph/seed.js';
+import { seedGraph, ensureSeeded, INTERNET_GRAPH_SEED } from '../../src/graph/seed.js';
 
 function freshSeeded() {
   const s = new MapStore(':memory:');
@@ -56,5 +56,34 @@ describe('seedGraph', () => {
     seedGraph(s);
     expect(s.allNodes().length).toBe(nodesBefore);
     expect(s.nodeEdgesFrom('marginalia').length).toBe(edgesBefore);
+  });
+
+  it('seeds the GitHub + saucedemo interiors, not just nodes', () => {
+    const store = new MapStore(':memory:');
+    seedGraph(store);
+    expect(store.statesForNode('github.com').length).toBeGreaterThan(0);
+    expect(store.statesForNode('saucedemo').length).toBeGreaterThan(0);
+    expect(store.getState('github:repo-detail')).not.toBeNull();
+  });
+
+  it('ensureSeeded backfills interiors when nodes exist but interiors do not', () => {
+    // Simulates a pre-existing webnav.db (has the github.com node from an older
+    // seed, but ZERO interior states). A node-only guard would skip seeding and
+    // leave drill-in empty; ensureSeeded must detect the missing interior.
+    const store = new MapStore(':memory:');
+    store.upsertNode({ id: 'github.com', homeUrl: 'https://github.com',
+      capabilities: ['code-search'], topics: ['code'] });
+    expect(store.getState('github:repo-detail')).toBeNull(); // no interior yet
+    ensureSeeded(store);
+    expect(store.getState('github:repo-detail')).not.toBeNull();
+    expect(store.statesForNode('github.com').length).toBeGreaterThan(0);
+  });
+
+  it('ensureSeeded is a no-op cost-wise when already fully seeded (idempotent)', () => {
+    const store = new MapStore(':memory:');
+    seedGraph(store);
+    const before = store.statesForNode('github.com').length;
+    ensureSeeded(store);
+    expect(store.statesForNode('github.com').length).toBe(before);
   });
 });

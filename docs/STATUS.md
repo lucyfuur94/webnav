@@ -1,6 +1,6 @@
 # webnav — STATUS (live handoff)
 
-**Updated:** 2026-06-01 · **Branch:** `main` · **Tests:** 191 unit pass + 2 gated live e2e (skipped without `WEBNAV_LIVE=1`) · **Build:** green
+**Updated:** 2026-06-02 · **Branch:** `main` · **Tests:** 215 unit pass + 3 gated live e2e (skipped without `WEBNAV_LIVE=1`) · **Build:** green
 
 > This is the canonical "where are we / what's next / how to run" doc. Keep it
 > current. CLAUDE.md = settled design & principles; this = the live checklist.
@@ -45,6 +45,26 @@ A file-backed `webnav.db` (SQLite, gitignored) persists the map across runs.
 | `webnav capture <url> <out.yml>` | dev: save a snapshot YAML (test fixtures) |
 
 Exit codes: 0 ok · 2 error (→ stderr + `--help` hint) · 3 ran-fine-but-empty/failed.
+
+## Viewing the graph (live) — NEW
+
+`npm run dev` → open **http://127.0.0.1:7777**. A read-only HTTP server
+(`src/server.ts`, Node built-in `http`, no new deps) over the **live** SQLite
+map: `/api/graph` (whole internet graph) and `/api/node/:id/interior` (one
+site's intra-site skeleton — its states + action-edges). **Click a site-node to
+drill into its interior** (e.g. github.com → search-entry → result-list →
+repo-detail). `webnav graph --html > map.html` still produces a static,
+shareable snapshot (no drill-in).
+
+DB is now the **single source of truth** for interiors: the known skeletons
+(GitHub, saucedemo) are written by the **seed step** (`seedGraph`), not lazily on
+the recall/walk path — the lazy `exploreGitHub`/`exploreSaucedemo` bootstrap was
+removed (a recall against an unseeded map returns `failed`; seed first). States
+gained a `node_id` column (backfilled from the `<node>:<state>` id prefix via an
+idempotent migration). `MapStore` now implements an `IMapStore` interface — the
+swappable seam for a future hosted backend. Spec/plan:
+`docs/superpowers/specs/2026-06-02-live-graph-viewer-design.md`,
+`docs/superpowers/plans/2026-06-02-live-graph-viewer.md`.
 
 ## DONE (merged to main, verified)
 

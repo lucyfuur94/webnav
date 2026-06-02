@@ -1,4 +1,4 @@
-import type { MapStore } from '../mapstore/store.js';
+import type { IMapStore } from '../mapstore/store.js';
 
 // A visualization-ready view of the whole internet graph. The UI groups nodes
 // into CLUSTERS = the capabilities they declare (a capability is a neighborhood
@@ -15,7 +15,7 @@ export interface GraphView {
  * Pure read (no writes). Deterministic ordering — nodes by id, edges by
  * (from, to, kind) — so the UI/tests are stable across runs.
  */
-export function buildGraphView(store: MapStore): GraphView {
+export function buildGraphView(store: IMapStore): GraphView {
   const allNodes = store.allNodes();
   const nodes = allNodes
     .map((n) => ({
