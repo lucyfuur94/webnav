@@ -5,11 +5,22 @@ export type EdgeKind = 'safe-reversible' | 'commit-point' | 'navigate' | 'unclas
 
 export interface State {
   id: string;
+  nodeId: string;               // owning site-node id, e.g. 'github.com'
   semanticName: string;
   urlPattern: string;
   role: StateRole;
   availableSignals: string[];   // capability, NOT goal intent
   fingerprint: string[];        // key declared elements that identify this state
+}
+
+export function makeState(
+  init: Pick<State, 'id' | 'nodeId' | 'semanticName' | 'urlPattern' | 'role'> & Partial<State>,
+): State {
+  return {
+    availableSignals: [],
+    fingerprint: [],
+    ...init,
+  };
 }
 
 export interface Edge {
