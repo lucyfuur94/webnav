@@ -12,7 +12,7 @@ import type { GraphView } from './export.js';
  * JSON to '<' so a node id/url containing the literal "</script>" cannot
  * break out of the data block (defensive — ids/urls are controlled, but free).
  */
-export function renderGraphHtml(view: GraphView): string {
+export function renderGraphHtml(view: GraphView, _opts?: { live?: boolean }): string {
   // JSON.stringify of the whole view, with '<' neutralized so neither
   // "</script>" nor "<!--" can terminate the embedding script block.
   const data = JSON.stringify(view).replace(/</g, '\\u003c');
