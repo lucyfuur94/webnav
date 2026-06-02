@@ -1,6 +1,6 @@
 # webnav — STATUS (live handoff)
 
-**Updated:** 2026-06-02 · **Branch:** `main` · **Tests:** 215 unit pass + 3 gated live e2e (skipped without `WEBNAV_LIVE=1`) · **Build:** green
+**Updated:** 2026-06-02 · **Branch:** `main` · **Tests:** 224 unit pass + 3 gated live e2e (skipped without `WEBNAV_LIVE=1`) · **Build:** green
 
 > This is the canonical "where are we / what's next / how to run" doc. Keep it
 > current. CLAUDE.md = settled design & principles; this = the live checklist.
@@ -66,6 +66,21 @@ swappable seam for a future hosted backend. Spec/plan:
 `docs/superpowers/specs/2026-06-02-live-graph-viewer-design.md`,
 `docs/superpowers/plans/2026-06-02-live-graph-viewer.md`.
 
+## R1 — A/B benchmark (DONE)
+
+`bench/` holds a re-runnable A/B benchmark: agent+webnav (CLI only) vs
+agent+plain-search (WebSearch+WebFetch), both Sonnet, scored by an anonymized
+Sonnet judge against gold answers. Broad mixed task set (`bench/tasks.yml`,
+unit-tested loader `bench/load.ts`); run recipe + verbatim prompts in
+`bench/README.md`; reports in `bench/results/`. **First run
+(`bench/results/2026-06-02.md`): quality webnav 3 / baseline 1 / tie 8; webnav
+used MORE agent tokens (median +6k), NOT fewer.** Honest finding — the naive
+token-savings thesis did NOT hold on general info-seeking (the baseline answers
+known facts with 0 tool calls; webnav always navigates). webnav's demonstrated
+edge is QUALITY on non-recallable data: won the fresh-maintenance comparison and
+swept the botwalled category 2-0 (read a free NYT homepage; caught a baseline
+hallucination). Spec: `docs/superpowers/specs/2026-06-02-r1-ab-benchmark-design.md`.
+
 ## DONE (merged to main, verified)
 
 - **v1 engine (Tasks 0–13):** snapshot parser, playwright-cli adapter (call-counted), SQLite MapStore, deterministic resolve/replay (commit-point safe), explorer, recall→evidence, goals, CLI.
@@ -96,12 +111,12 @@ favicon 404 remains). Covered by a new unit test in `tests/graph/html.test.ts`.
 
 In roughly recommended order:
 
-1. **R1 — A/B benchmark (recommended payoff):** subagent + the real `webnav` CLI vs subagent + plain web search, on ~8–12 real navigation/info-seeking tasks; score answer correctness + agent tokens. Turns capability into evidence. The CLI is now self-describing so the subagent can use it. (Honest scoping & failure-mode analysis: see the "coverage" discussion — webnav covers navigation/memory/extraction/token-cost/site-selection; NOT answer-synthesis/adversarial/low-level-mechanics, which are the agent's job.)
-2. **R5 — resume loop:** agent answers a `needs-navigation`/`needs-classification`; `walkRoute` continues to completion. Lets the saucedemo flow finish autonomously end-to-end.
-3. **G4 — co-use weight learning:** node-edge weights emerge from usage + decay (the Maps-traffic analog), so `route` ordering reflects real use. `recordOutcome`/`decayConfidence` machinery already exists at the intra-site edge level — reuse at the node level.
-4. **Auto-learn nodes from usage:** when search/recall visits a new site, auto-add it as a node (the self-growing gazetteer).
-5. **Phase 5 — MCP wrapper (secondary):** expose the verbs as MCP tools; CLI stays primary; test both.
-6. **Richer GitHub signals:** `closed_issues`, `latest_release`, `has_ci` (currently omitted).
+1. **R5 — resume loop:** agent answers a `needs-navigation`/`needs-classification`; `walkRoute` continues to completion. Lets the saucedemo flow finish autonomously end-to-end.
+2. **G4 — co-use weight learning:** node-edge weights emerge from usage + decay (the Maps-traffic analog), so `route` ordering reflects real use. `recordOutcome`/`decayConfidence` machinery already exists at the intra-site edge level — reuse at the node level.
+3. **Auto-learn nodes from usage:** when search/recall visits a new site, auto-add it as a node (the self-growing gazetteer).
+4. **Phase 5 — MCP wrapper (secondary):** expose the verbs as MCP tools; CLI stays primary; test both.
+5. **Richer GitHub signals:** `closed_issues`, `latest_release`, `has_ci` (currently omitted).
+6. **Token-thesis follow-up (from R1):** R1 showed webnav does NOT save agent tokens on general-info tasks (the baseline answers known facts with 0 tool calls). To test the token thesis fairly, add tasks REQUIRING multi-step navigation to non-addressable state. webnav's proven edge is QUALITY on non-recallable data (fresh signals, bot-walled/paywalled content) — see `bench/results/2026-06-02.md`.
 
 ## Honest known limitations (not bugs — design/ecosystem reality)
 
