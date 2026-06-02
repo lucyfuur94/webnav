@@ -8,7 +8,31 @@ import { makeEdge, makeNodeEdge } from './types.js';
 const SCHEMA = readFileSync(
   join(dirname(fileURLToPath(import.meta.url)), 'schema.sql'), 'utf8');
 
-export class MapStore {
+/** The data-access seam. SqliteMapStore is the only impl today; a hosted
+ *  backend (Firestore/Postgres) can implement the same interface later. */
+export interface IMapStore {
+  transaction(fn: () => void): void;
+  upsertState(s: State): void;
+  getState(id: string): State | null;
+  allStates(): State[];
+  statesForNode(nodeId: string): State[];
+  upsertEdge(e: Edge): void;
+  edgesFrom(fromState: string): Edge[];
+  allEdges(): Edge[];
+  recordOutcome(fromState: string, toState: string, semanticStep: string, success: boolean): void;
+  decayConfidence(nowMs?: number, halfLifeMs?: number): void;
+  upsertGoal(g: Goal): void;
+  getGoal(name: string): Goal | null;
+  upsertNode(n: SiteNode): void;
+  getNode(id: string): SiteNode | null;
+  allNodes(): SiteNode[];
+  nodesByCapability(capability: string): SiteNode[];
+  upsertNodeEdge(e: NodeEdge): void;
+  nodeEdgesFrom(fromNode: string): NodeEdge[];
+  allNodeEdges(): NodeEdge[];
+}
+
+export class MapStore implements IMapStore {
   private db: Database.Database;
   constructor(path = 'webnav.db') {
     this.db = new Database(path);
