@@ -21,17 +21,17 @@ export class MapStore {
   }
 
   upsertState(s: State): void {
-    this.db.prepare(`INSERT INTO states VALUES (@id,@semanticName,@urlPattern,@role,@sig,@fp)
-      ON CONFLICT(id) DO UPDATE SET semantic_name=@semanticName, url_pattern=@urlPattern,
+    this.db.prepare(`INSERT INTO states VALUES (@id,@nodeId,@semanticName,@urlPattern,@role,@sig,@fp)
+      ON CONFLICT(id) DO UPDATE SET node_id=@nodeId, semantic_name=@semanticName, url_pattern=@urlPattern,
       role=@role, available_signals=@sig, fingerprint=@fp`)
       .run({
-        id: s.id, semanticName: s.semanticName, urlPattern: s.urlPattern, role: s.role,
+        id: s.id, nodeId: s.nodeId, semanticName: s.semanticName, urlPattern: s.urlPattern, role: s.role,
         sig: JSON.stringify(s.availableSignals), fp: JSON.stringify(s.fingerprint),
       });
   }
   getState(id: string): State | null {
     const r: any = this.db.prepare('SELECT * FROM states WHERE id=?').get(id);
-    return r ? { id: r.id, semanticName: r.semantic_name, urlPattern: r.url_pattern,
+    return r ? { id: r.id, nodeId: r.node_id, semanticName: r.semantic_name, urlPattern: r.url_pattern,
       role: r.role, availableSignals: JSON.parse(r.available_signals),
       fingerprint: JSON.parse(r.fingerprint) } : null;
   }

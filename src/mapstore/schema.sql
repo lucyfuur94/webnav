@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS states (
-  id TEXT PRIMARY KEY, semantic_name TEXT NOT NULL, url_pattern TEXT NOT NULL,
+  id TEXT PRIMARY KEY, node_id TEXT, semantic_name TEXT NOT NULL, url_pattern TEXT NOT NULL,
   role TEXT NOT NULL, available_signals TEXT NOT NULL, fingerprint TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS edges (
