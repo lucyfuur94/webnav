@@ -4,7 +4,7 @@ import { FIND_BATTLE_TESTED_REPOS } from '../../src/goals/find-battle-tested-rep
 describe('find-battle-tested-repos goal', () => {
   it('visits the detail state and surfaces quality signals', () => {
     const g = FIND_BATTLE_TESTED_REPOS;
-    expect(g.name).toBe('find-battle-tested-repos');
+    expect(g.name).toBe('github-repos');
     expect(g.visit).toContain('detail');
     expect(g.surface.detail).toEqual(
       expect.arrayContaining(['stars', 'last_commit', 'open_issues', 'license']));

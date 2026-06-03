@@ -22,8 +22,8 @@ describe('core types', () => {
       availableSignals: ['stars', 'license'], fingerprint: ['heading', 'star-count'],
     };
     const g: Goal = {
-      name: 'find-battle-tested-repos', visit: ['detail'],
-      surface: { detail: ['stars', 'license'] }, candidateLimit: 10,
+      name: 'github-repos', site: null, entry: null, extractor: null,
+      visit: ['detail'], surface: { detail: ['stars', 'license'] }, candidateLimit: 10,
     };
     expect(s.role).toBe('detail');
     expect(g.candidateLimit).toBe(10);

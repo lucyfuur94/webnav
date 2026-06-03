@@ -41,7 +41,7 @@ describe('MapStore', () => {
 
   it('stores and retrieves a goal', () => {
     const s = freshStore();
-    s.upsertGoal({ name: 'g', visit: ['detail'], surface: { detail: ['stars'] }, candidateLimit: 5 });
+    s.upsertGoal({ name: 'g', site: null, entry: null, extractor: null, visit: ['detail'], surface: { detail: ['stars'] }, candidateLimit: 5 });
     expect(s.getGoal('g')?.candidateLimit).toBe(5);
   });
 

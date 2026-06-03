@@ -12,7 +12,8 @@ CREATE TABLE IF NOT EXISTS edges (
   UNIQUE(from_state, to_state, semantic_step)
 );
 CREATE TABLE IF NOT EXISTS goals (
-  name TEXT PRIMARY KEY, visit TEXT NOT NULL, surface TEXT NOT NULL, candidate_limit INTEGER NOT NULL
+  name TEXT PRIMARY KEY, site TEXT, entry TEXT, extractor TEXT,
+  visit TEXT NOT NULL, surface TEXT NOT NULL, candidate_limit INTEGER NOT NULL
 );
 CREATE TABLE IF NOT EXISTS nodes (
   id TEXT PRIMARY KEY, home_url TEXT NOT NULL, capabilities TEXT NOT NULL, topics TEXT NOT NULL

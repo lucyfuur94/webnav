@@ -41,6 +41,9 @@ export interface Edge {
 
 export interface Goal {
   name: string;
+  site: string | null;                      // owning site/node id; null for legacy rows
+  entry: string | null;                     // entry URL/query template, {query} slot
+  extractor: string | null;                 // named extractor (registry key)
   visit: string[];                          // state roles/ids to visit per candidate
   surface: Record<string, string[]>;        // stateRole -> signals to extract
   candidateLimit: number;
