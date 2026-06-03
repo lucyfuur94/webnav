@@ -35,7 +35,7 @@ describe('recall (evidence only, no ranking)', () => {
 
     expect(r.status).toBe('done');
     if (r.status !== 'done') throw new Error('expected done');
-    expect(r.evidence.goal).toBe('find-battle-tested-repos');
+    expect(r.evidence.goal).toBe('github-repos');
     expect(r.evidence.query).toBe('python retry lib');
     expect(r.evidence.candidates.length).toBeGreaterThan(0);
     expect(r.evidence.candidates[0].signals).toHaveProperty('stars');

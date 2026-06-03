@@ -7,12 +7,12 @@ describe('listCoverage (the map table of contents)', () => {
     expect(c.sites).toContain('github.com');
     expect(c.places.length).toBeGreaterThan(0);
     expect(c.places.some((p) => p.place === 'trending repositories')).toBe(true);
-    expect(c.goals.some((g) => g.name === 'find-battle-tested-repos')).toBe(true);
+    expect(c.goals.some((g) => g.name === 'github-repos')).toBe(true);
   });
 
   it('reports the signals each goal surfaces', () => {
     const c = listCoverage();
-    const goal = c.goals.find((g) => g.name === 'find-battle-tested-repos');
+    const goal = c.goals.find((g) => g.name === 'github-repos');
     expect(goal?.surfaces).toEqual(expect.arrayContaining(['stars', 'license']));
   });
 

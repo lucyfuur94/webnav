@@ -2,13 +2,17 @@ import { describe, it, expect } from 'vitest';
 import { parseArgs } from '../src/cli.js';
 
 describe('parseArgs', () => {
-  it('parses recall with default top', () => {
+  it('parses recall with default top and default goal', () => {
     expect(parseArgs(['recall', 'python retry lib']))
-      .toEqual({ cmd: 'recall', query: 'python retry lib', top: 10 });
+      .toEqual({ cmd: 'recall', goal: 'github-repos', query: 'python retry lib', top: 10 });
   });
-  it('parses --top', () => {
+  it('parses recall --top', () => {
     expect(parseArgs(['recall', 'x', '--top', '5']))
-      .toEqual({ cmd: 'recall', query: 'x', top: 5 });
+      .toEqual({ cmd: 'recall', goal: 'github-repos', query: 'x', top: 5 });
+  });
+  it('parses recall with explicit goal', () => {
+    expect(parseArgs(['recall', 'my-goal', 'search term']))
+      .toEqual({ cmd: 'recall', goal: 'my-goal', query: 'search term', top: 10 });
   });
   it('parses capture', () => {
     expect(parseArgs(['capture', 'https://github.com', 'out.yml']))
@@ -28,6 +32,14 @@ describe('parseArgs', () => {
   it('parses search with default top', () => {
     expect(parseArgs(['search', 'who won the 2018 world cup']))
       .toEqual({ cmd: 'search', query: 'who won the 2018 world cup', top: 3 });
+  });
+  it('parses read with the url first', () => {
+    expect(parseArgs(['read', 'https://github.com/psf/requests']))
+      .toEqual({ cmd: 'read', url: 'https://github.com/psf/requests', raw: false });
+  });
+  it('parses read --raw in either order (flag before url)', () => {
+    expect(parseArgs(['read', '--raw', 'https://x.com']))
+      .toEqual({ cmd: 'read', url: 'https://x.com', raw: true });
   });
   it('parses search --top', () => {
     expect(parseArgs(['search', 'x', '--top', '5']))
