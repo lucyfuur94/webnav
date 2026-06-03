@@ -19,8 +19,8 @@ export type ParsedArgs =
   | { cmd: 'capture'; url: string; out: string }
   | { cmd: 'eval'; url: string; js: string }
   | { cmd: 'network'; url: string }
-  | { cmd: 'go-back' }
-  | { cmd: 'reload' }
+  | { cmd: 'go-back'; session: string | undefined }
+  | { cmd: 'reload'; session: string | undefined }
   | { cmd: 'dev-help' }
   | { cmd: 'dev'; devCmd: string | undefined; devRest: string[] };
 
@@ -121,8 +121,8 @@ export function parseArgs(argv: string[]): ParsedArgs {
     const pos = rest.filter((a) => !a.startsWith('--'));
     return { cmd, url: pos[0] };
   }
-  if (cmd === 'go-back') return { cmd };
-  if (cmd === 'reload') return { cmd };
+  if (cmd === 'go-back') return { cmd, session: flagValue(rest, '--session') };
+  if (cmd === 'reload') return { cmd, session: flagValue(rest, '--session') };
   throw new Error(`unknown command: ${cmd}\nRun \`webnav --help\` to see available commands.`);
 }
 
@@ -294,7 +294,10 @@ async function main() {
   }
   if (args.cmd === 'go-back' || args.cmd === 'reload') {
     const { PlaywrightAdapter } = await import('./playwright/adapter.js');
-    const adapter = new PlaywrightAdapter('webnav-nav');
+    // These only make sense against an EXISTING session the agent has been
+    // driving (a fresh session has no page to go back to). --session names it;
+    // default 'webnav-nav' is the convenience session for a quick standalone step.
+    const adapter = new PlaywrightAdapter(args.session ?? 'webnav-nav');
     try {
       const out = args.cmd === 'go-back' ? await adapter.goBack() : await adapter.reload();
       console.log(JSON.stringify({ status: 'done', action: args.cmd, out: out.trim() }, null, 2));

@@ -109,6 +109,13 @@ describe('parseArgs', () => {
     expect(parseArgs(['network', 'https://x.com']))
       .toEqual({ cmd: 'network', url: 'https://x.com' });
   });
+  it('parses go-back with --session (the documented example)', () => {
+    expect(parseArgs(['go-back', '--session', 'mysession']))
+      .toEqual({ cmd: 'go-back', session: 'mysession' });
+  });
+  it('parses go-back with no session (default)', () => {
+    expect(parseArgs(['go-back'])).toEqual({ cmd: 'go-back', session: undefined });
+  });
   it('unknown verb throws with a --help hint', () => {
     expect(() => parseArgs(['bogus'])).toThrow(/--help/);
   });
