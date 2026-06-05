@@ -18,12 +18,14 @@ async function boot() {
 }
 
 describe('webnav dev server', () => {
-  it('GET / serves the viewer HTML', async () => {
+  it('GET / serves the build hint when web/dist is absent', async () => {
+    // The viewer is now the web/ Vite+React app served from web/dist; in this
+    // test it isn't built, so / returns the 503 "run npm run build" hint. (The
+    // served-static happy path is covered in tests/server-static.test.ts.)
     const base = await boot();
     const res = await fetch(base + '/');
-    expect(res.status).toBe(200);
-    expect(res.headers.get('content-type')).toContain('text/html');
-    expect(await res.text()).toContain('webnav');
+    expect(res.status).toBe(503);
+    expect(await res.text()).toMatch(/npm run build/);
   });
 
   it('GET /api/graph returns the graph view JSON', async () => {
