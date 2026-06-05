@@ -44,6 +44,8 @@ webnav capture <url> <out.yml>               dev: save a snapshot YAML
 ```
 `webnav <verb> --help` for details. Output is JSON on stdout; exit 0 ok / 2 error / 3 empty.
 
+Consumer verbs can also be invoked canonically as `webnav use <verb> ...` and map-authoring verbs as `webnav dev <verb> ...`; bare consumer verbs (e.g. `webnav recall ...`) still work too.
+
 ### See the map
 ```bash
 npm run dev                      # live viewer at http://127.0.0.1:7777 (reads SQLite live)

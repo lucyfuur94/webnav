@@ -27,6 +27,7 @@ export type ParsedArgs =
   | { cmd: 'graph-edit'; node: string; graph: string }
   | { cmd: 'graph-show'; node: string }
   | { cmd: 'dev-help' }
+  | { cmd: 'use-help' }
   | { cmd: 'dev'; devCmd: string | undefined; devRest: string[] };
 
 // Split a comma-separated flag value into an array; absent flag → empty array.
@@ -72,6 +73,11 @@ export function parseArgs(argv: string[]): ParsedArgs {
   }
   if (cmd === 'list-goals') return { cmd };
   if (cmd === 'capture') return { cmd, url: rest[0], out: rest[1] };
+  if (cmd === 'use') {
+    const sub = rest[0];
+    if (!sub || sub === '--help' || sub === '-h') return { cmd: 'use-help' };
+    return parseArgs([sub, ...rest.slice(1)]);
+  }
   if (cmd === 'dev') {
     const sub = rest[0];
     if (!sub || sub === '--help' || sub === '-h') return { cmd: 'dev-help' };
@@ -190,6 +196,10 @@ async function main() {
     const goals = store.allGoals().map((g) => ({ id: g.name, site: g.site,
       signals: Object.values(g.surface).flat() }));
     console.log(JSON.stringify(goals, null, 2));
+    return;
+  }
+  if (args.cmd === 'use-help') {
+    console.log(topLevelHelp());
     return;
   }
   if (args.cmd === 'dev-help') {
