@@ -235,6 +235,44 @@ export const DEV_COMMANDS: CommandSpec[] = [
     flags: [],
     example: 'webnav capture https://github.com out.yml',
   },
+  {
+    name: 'record-start',
+    summary: 'Begin a record session: pages you browse via webnav are captured for mapping.',
+    args: [],
+    flags: [{ name: '--session', takesValue: true, description: 'Record session id (defaults to a generated one).' }],
+    example: 'webnav dev record-start --session map-1',
+  },
+  {
+    name: 'record-stop',
+    summary: 'End a record session (stop capturing pages).',
+    args: [],
+    flags: [{ name: '--session', takesValue: true, description: 'Record session id from `dev record-start`.' }],
+    example: 'webnav dev record-stop --session map-1',
+  },
+  {
+    name: 'graph-analyse',
+    summary: 'Mechanically derive a per-site navigation structure from a record session (data only — the agent names + validates it).',
+    args: [],
+    flags: [{ name: '--session', takesValue: true, description: 'Record session id from `dev record-start`.' }],
+    example: 'webnav dev graph-analyse --session map-1',
+  },
+  {
+    name: 'graph-edit',
+    summary: 'Upsert a validated navigation graph into a site-node interior (creates the node if new).',
+    args: [],
+    flags: [
+      { name: '--node', takesValue: true, description: 'Site-node id (host), e.g. github.com.' },
+      { name: '--graph', takesValue: true, description: 'JSON {states:[{label,urlPattern?,fingerprint?}], edges:[{from,to,via,needsInput?,why?}]}.' },
+    ],
+    example: 'webnav dev graph-edit --node github.com --graph \'{"states":[],"edges":[]}\'',
+  },
+  {
+    name: 'graph-show',
+    summary: 'Read a site-node\'s persisted navigation skeleton (states + edges).',
+    args: [],
+    flags: [{ name: '--node', takesValue: true, description: 'Site-node id (host), e.g. github.com.' }],
+    example: 'webnav dev graph-show --node github.com',
+  },
 ];
 
 export const COMMANDS: CommandSpec[] = [...CONSUMER_COMMANDS, ...DEV_COMMANDS];
