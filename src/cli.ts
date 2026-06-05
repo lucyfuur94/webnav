@@ -14,14 +14,20 @@ export type ParsedArgs =
   | { cmd: 'route'; request: string; capability?: string }
   | { cmd: 'hop'; url: string; toCluster?: string; toNode?: string }
   | { cmd: 'graph' }
-  | { cmd: 'add-node'; id: string; url: string; capabilities: string[]; topics: string[] }
-  | { cmd: 'add-edge'; from: string; to: string; kind: string }
+  | { cmd: 'node-add'; id: string; url: string; capabilities: string[]; topics: string[] }
+  | { cmd: 'edge-add'; from: string; to: string; kind: string }
   | { cmd: 'capture'; url: string; out: string }
   | { cmd: 'eval'; url: string; js: string }
   | { cmd: 'network'; url: string }
   | { cmd: 'go-back'; session: string | undefined }
   | { cmd: 'reload'; session: string | undefined }
+  | { cmd: 'record-start'; session: string }
+  | { cmd: 'record-stop'; session: string }
+  | { cmd: 'graph-analyse'; session: string }
+  | { cmd: 'graph-edit'; node: string; graph: string }
+  | { cmd: 'graph-show'; node: string }
   | { cmd: 'dev-help' }
+  | { cmd: 'use-help' }
   | { cmd: 'dev'; devCmd: string | undefined; devRest: string[] };
 
 // Split a comma-separated flag value into an array; absent flag → empty array.
@@ -67,6 +73,11 @@ export function parseArgs(argv: string[]): ParsedArgs {
   }
   if (cmd === 'list-goals') return { cmd };
   if (cmd === 'capture') return { cmd, url: rest[0], out: rest[1] };
+  if (cmd === 'use') {
+    const sub = rest[0];
+    if (!sub || sub === '--help' || sub === '-h') return { cmd: 'use-help' };
+    return parseArgs([sub, ...rest.slice(1)]);
+  }
   if (cmd === 'dev') {
     const sub = rest[0];
     if (!sub || sub === '--help' || sub === '-h') return { cmd: 'dev-help' };
@@ -103,14 +114,14 @@ export function parseArgs(argv: string[]): ParsedArgs {
     };
   }
   if (cmd === 'graph') return { cmd };
-  if (cmd === 'add-node') {
+  if (cmd === 'node-add') {
     return {
       cmd, id: rest[0], url: flagValue(rest, '--url') ?? '',
       capabilities: listFlag(rest, '--capabilities'),
       topics: listFlag(rest, '--topics'),
     };
   }
-  if (cmd === 'add-edge') {
+  if (cmd === 'edge-add') {
     return { cmd, from: rest[0], to: rest[1], kind: flagValue(rest, '--kind') ?? 'capability' };
   }
   if (cmd === 'eval') {
@@ -123,6 +134,11 @@ export function parseArgs(argv: string[]): ParsedArgs {
   }
   if (cmd === 'go-back') return { cmd, session: flagValue(rest, '--session') };
   if (cmd === 'reload') return { cmd, session: flagValue(rest, '--session') };
+  if (cmd === 'record-start') return { cmd, session: flagValue(rest, '--session') ?? '' };
+  if (cmd === 'record-stop') return { cmd, session: flagValue(rest, '--session') ?? '' };
+  if (cmd === 'graph-analyse') return { cmd, session: flagValue(rest, '--session') ?? '' };
+  if (cmd === 'graph-edit') return { cmd, node: flagValue(rest, '--node') ?? '', graph: flagValue(rest, '--graph') ?? '' };
+  if (cmd === 'graph-show') return { cmd, node: flagValue(rest, '--node') ?? '' };
   throw new Error(`unknown command: ${cmd}\nRun \`webnav --help\` to see available commands.`);
 }
 
@@ -180,6 +196,10 @@ async function main() {
     const goals = store.allGoals().map((g) => ({ id: g.name, site: g.site,
       signals: Object.values(g.surface).flat() }));
     console.log(JSON.stringify(goals, null, 2));
+    return;
+  }
+  if (args.cmd === 'use-help') {
+    console.log(topLevelHelp());
     return;
   }
   if (args.cmd === 'dev-help') {
@@ -251,8 +271,8 @@ async function main() {
     console.log(JSON.stringify(view, null, 2));
     return;
   }
-  if (args.cmd === 'add-node') {
-    // add-node: teach webnav a new site (persisted; the viz UI reads the same store).
+  if (args.cmd === 'node-add') {
+    // node-add: teach webnav a new site (persisted; the viz UI reads the same store).
     const { MapStore } = await import('./mapstore/store.js');
     const { ensureSeeded } = await import('./graph/seed.js');
     const { addNode } = await import('./graph/teach.js');
@@ -264,8 +284,8 @@ async function main() {
     console.log(JSON.stringify(node, null, 2));
     return;
   }
-  if (args.cmd === 'add-edge') {
-    // add-edge: teach webnav a relationship between two KNOWN sites.
+  if (args.cmd === 'edge-add') {
+    // edge-add: teach webnav a relationship between two KNOWN sites.
     const { MapStore } = await import('./mapstore/store.js');
     const { ensureSeeded } = await import('./graph/seed.js');
     const { addEdge } = await import('./graph/teach.js');
@@ -305,6 +325,43 @@ async function main() {
       console.log(JSON.stringify({ status: 'failed', action: args.cmd, reason: String(e) }, null, 2));
       process.exitCode = 3;
     }
+    return;
+  }
+  if (args.cmd === 'record-start') {
+    const { RecordStore } = await import('./mapstore/record.js');
+    const rec = new RecordStore('webnav.db');
+    const session = args.session || `map-${Date.now()}`;
+    rec.start(session);
+    console.log(JSON.stringify({ status: 'recording', session }, null, 2));
+    return;
+  }
+  if (args.cmd === 'record-stop') {
+    const { RecordStore } = await import('./mapstore/record.js');
+    new RecordStore('webnav.db').stop(args.session);
+    console.log(JSON.stringify({ status: 'stopped', session: args.session }, null, 2));
+    return;
+  }
+  if (args.cmd === 'graph-analyse') {
+    const { RecordStore } = await import('./mapstore/record.js');
+    const { analyseObservations } = await import('./explorer/analyse.js');
+    const obs = new RecordStore('webnav.db').observations(args.session);
+    const result = analyseObservations(obs);
+    console.log(JSON.stringify(result, null, 2));
+    if (result.sites.length === 0) process.exitCode = 3;
+    return;
+  }
+  if (args.cmd === 'graph-edit') {
+    const { MapStore } = await import('./mapstore/store.js');
+    const { editGraph } = await import('./graph/edit.js');
+    const store = new MapStore('webnav.db');
+    const graph = JSON.parse(args.graph);
+    console.log(JSON.stringify(editGraph(store, args.node, graph), null, 2));
+    return;
+  }
+  if (args.cmd === 'graph-show') {
+    const { MapStore } = await import('./mapstore/store.js');
+    const { showInterior } = await import('./graph/show.js');
+    console.log(JSON.stringify(showInterior(new MapStore('webnav.db'), args.node), null, 2));
     return;
   }
   // recall: open GitHub search for the query, then drive recall() over the live

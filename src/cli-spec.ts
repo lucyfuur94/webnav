@@ -201,7 +201,7 @@ export const DEV_COMMANDS: CommandSpec[] = [
     example: 'webnav graph --html > map.html',
   },
   {
-    name: 'add-node',
+    name: 'node-add',
     summary: 'Teach webnav a new site: its id, url, capabilities, topics.',
     args: [
       { name: 'id', required: true, description: 'Node id (e.g. npmjs.com) — also the skeleton namespace.' },
@@ -211,10 +211,10 @@ export const DEV_COMMANDS: CommandSpec[] = [
       { name: '--capabilities', takesValue: true, description: 'Comma-separated capability/cluster names this site serves.' },
       { name: '--topics', takesValue: true, description: 'Comma-separated declared content topics.' },
     ],
-    example: 'webnav add-node npmjs.com --url https://www.npmjs.com --capabilities package-search --topics javascript,packages',
+    example: 'webnav dev node-add npmjs.com --url https://www.npmjs.com --capabilities package-search --topics javascript,packages',
   },
   {
-    name: 'add-edge',
+    name: 'edge-add',
     summary: 'Teach webnav a relationship between two known sites.',
     args: [
       { name: 'from', required: true, description: 'Source node id (must already be known).' },
@@ -223,7 +223,7 @@ export const DEV_COMMANDS: CommandSpec[] = [
     flags: [
       { name: '--kind', takesValue: true, default: 'capability', description: 'Edge kind: capability | hyperlink | co-use | content.' },
     ],
-    example: 'webnav add-edge github.com pypi.org --kind hyperlink',
+    example: 'webnav dev edge-add github.com pypi.org --kind hyperlink',
   },
   {
     name: 'capture',
@@ -234,6 +234,44 @@ export const DEV_COMMANDS: CommandSpec[] = [
     ],
     flags: [],
     example: 'webnav capture https://github.com out.yml',
+  },
+  {
+    name: 'record-start',
+    summary: 'Begin a record session: pages you browse via webnav are captured for mapping.',
+    args: [],
+    flags: [{ name: '--session', takesValue: true, description: 'Record session id (defaults to a generated one).' }],
+    example: 'webnav dev record-start --session map-1',
+  },
+  {
+    name: 'record-stop',
+    summary: 'End a record session (stop capturing pages).',
+    args: [],
+    flags: [{ name: '--session', takesValue: true, description: 'Record session id from `dev record-start`.' }],
+    example: 'webnav dev record-stop --session map-1',
+  },
+  {
+    name: 'graph-analyse',
+    summary: 'Mechanically derive a per-site navigation structure from a record session (data only — the agent names + validates it).',
+    args: [],
+    flags: [{ name: '--session', takesValue: true, description: 'Record session id from `dev record-start`.' }],
+    example: 'webnav dev graph-analyse --session map-1',
+  },
+  {
+    name: 'graph-edit',
+    summary: 'Upsert a validated navigation graph into a site-node interior (creates the node if new).',
+    args: [],
+    flags: [
+      { name: '--node', takesValue: true, description: 'Site-node id (host), e.g. github.com.' },
+      { name: '--graph', takesValue: true, description: 'JSON {states:[{label,urlPattern?,fingerprint?}], edges:[{from,to,via,needsInput?,why?}]}.' },
+    ],
+    example: 'webnav dev graph-edit --node github.com --graph \'{"states":[],"edges":[]}\'',
+  },
+  {
+    name: 'graph-show',
+    summary: 'Read a site-node\'s persisted navigation skeleton (states + edges).',
+    args: [],
+    flags: [{ name: '--node', takesValue: true, description: 'Site-node id (host), e.g. github.com.' }],
+    example: 'webnav dev graph-show --node github.com',
   },
 ];
 

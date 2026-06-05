@@ -20,6 +20,8 @@ export function topLevelHelp(): string {
   lines.push('Usage: webnav <command> [args...] [flags]');
   lines.push(`Version: ${VERSION}`);
   lines.push('');
+  lines.push('use — drive the browser + query the map:');
+  lines.push('');
   const GROUPS: { key: 'find' | 'read' | 'navigate'; header: string }[] = [
     { key: 'find', header: 'Find:      (where is it)' },
     { key: 'read', header: 'Read:      (get content / evidence)' },
